@@ -6,29 +6,85 @@ from io import BytesIO
 from gradecard_generator import generate_pdf
 from email_sender import send_email
 
-# --- Streamlit Page Config ---
+# ---- PAGE CONFIG ----
 st.set_page_config(page_title="Grade Card Generator", page_icon="🎓", layout="centered")
 
-# --- App Title ---
-st.markdown(
-    """
-    <h2 style='text-align:center; color:#1C3652;'>XYZ College of Science</h2>
-    <h4 style='text-align:center; color:#4E81BD;'>Final Year B.Sc. (CS) Grade Card Generator</h4>
-    """,
-    unsafe_allow_html=True
-)
+# ---- CUSTOM CSS ----
+st.markdown("""
+    <style>
+        body {
+            background-color: #f7f7f7;
+        }
+        .block-container {
+            max-width: 900px;
+            margin: auto;
+            padding-top: 2rem;
+        }
+        h1, h2, h3, h4 {
+            text-align: center;
+            color: #1C3652;
+            font-family: 'Helvetica', sans-serif;
+        }
+        .header-logo {
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            width: 120px;
+        }
+        .stButton button {
+            background-color: #4E81BD;
+            color: white;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+        }
+        .stButton button:hover {
+            background-color: #365f8c;
+            color: white;
+        }
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 2px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .success-box {
+            background: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .error-box {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
-st.write("Upload a **CSV file** with student data to generate and send grade cards.")
+st.markdown("<h2>🎓 Student Grade Card Generator & Sender</h2>", unsafe_allow_html=True)
+st.write("---")
 
-# --- File Upload ---
-uploaded_file = st.file_uploader("Upload CSV", type=["csv"])
+# ---- FILE UPLOAD CARD ----
+st.markdown("<div class='card'>", unsafe_allow_html=True)
+uploaded_file = st.file_uploader("Upload CSV file with student marks", type=["csv"])
+st.markdown("</div>", unsafe_allow_html=True)
 
-if uploaded_file is not None:
+if uploaded_file:
     df = pd.read_csv(uploaded_file)
+
+    # Preview Card
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.write("### Preview of Uploaded Data")
     st.dataframe(df)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    # --- Generate Grade Cards ---
+    # ---- Generate PDFs ----
     if st.button("Generate Grade Cards"):
         output_dir = "grade_cards"
         os.makedirs(output_dir, exist_ok=True)
@@ -36,9 +92,9 @@ if uploaded_file is not None:
         for _, student in df.iterrows():
             generate_pdf(student, output_dir)
 
-        st.success("Grade cards generated successfully!")
+        st.markdown("<div class='success-box'>Grade cards generated successfully!</div>", unsafe_allow_html=True)
 
-        # --- Offer ZIP Download ---
+        # ZIP Download
         zip_buffer = BytesIO()
         with zipfile.ZipFile(zip_buffer, "w") as zipf:
             for _, student in df.iterrows():
@@ -54,23 +110,11 @@ if uploaded_file is not None:
             mime="application/zip"
         )
 
-        # Individual Downloads
-        st.write("### Download Individual Grade Cards")
-        for _, student in df.iterrows():
-            file_path = os.path.join(output_dir, f"{student['Name'].replace(' ', '_')}_gradecard.pdf")
-            with open(file_path, "rb") as file:
-                st.download_button(
-                    label=f"Download {student['Name']}'s Grade Card",
-                    data=file,
-                    file_name=f"{student['Name']}_gradecard.pdf",
-                    mime="application/pdf"
-                )
-
-    # --- Send Emails ---
+    # ---- Email Sending ----
     if st.button("Send Grade Cards via Email"):
         output_dir = "grade_cards"
         if not os.path.exists(output_dir):
-            st.error("Please generate grade cards first!")
+            st.markdown("<div class='error-box'>Generate grade cards first!</div>", unsafe_allow_html=True)
         else:
             for _, student in df.iterrows():
                 pdf_path = os.path.join(output_dir, f"{student['Name'].replace(' ', '_')}_gradecard.pdf")
@@ -81,6 +125,6 @@ if uploaded_file is not None:
                         body=f"Dear {student['Name']},\n\nPlease find attached your grade card.\n\nRegards,\nXYZ College",
                         attachment_path=pdf_path
                     )
-                    st.success(f"Email sent to {student['Name']} ({student['Email']})")
+                    st.success(f"Email sent succesfully !!")
                 except Exception as e:
-                    st.error(f"Failed to send email to {student['Name']} ({student['Email']}): {e}")
+                    st.error(f"Failed to send {e}")
